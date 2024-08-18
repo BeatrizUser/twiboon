@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ricardo Zito 2024</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center" style="background-image: url('fundo.png'); background-size: cover; background-position: center;">
+
+    <div class="bg-white shadow-lg rounded-lg p-6 max-w-lg w-full">
+        <div class="flex justify-center mb-6">
+            <img src="capa.png" alt="Logo" class="m-0 pd-0">
+        </div>
+        <h1 class="text-2xl font-bold mb-6 text-center">Participe da Nossa Campanha <br> Ricardo Zito 2024</h1>
+
+        <!-- Input para carregar a imagem -->
+        <input type="file" id="upload" accept="image/*" class="mb-4 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+        
+        <!-- Canvas para desenhar a imagem com moldura -->
+        <div class="flex justify-center mb-4">
+            <canvas id="canvas" width="500" height="500" class="border rounded-md"></canvas>
+        </div>
+
+        <!-- Botão para baixar a imagem final -->
+        <button id="download" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full w-full">
+            Baixar Imagem
+        </button>
+    </div>
+
+    <script>
+        // Referências aos elementos
+        const upload = document.getElementById('upload');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const downloadButton = document.getElementById('download');
+
+        // Função para carregar a imagem e desenhar no Canvas
+        upload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Defina o tamanho do Canvas para 500x500
+                    const canvasWidth = 500;
+                    const canvasHeight = 500;
+                    canvas.width = canvasWidth;
+                    canvas.height = canvasHeight;
+
+                    // Calcule a proporção da imagem para que ela cubra toda a área do canvas
+                    const imgAspectRatio = img.width / img.height;
+                    const canvasAspectRatio = canvasWidth / canvasHeight;
+
+                    let drawWidth, drawHeight, xOffset, yOffset;
+
+                    if (imgAspectRatio > canvasAspectRatio) {
+                        // A imagem é mais larga, ajusta a largura e corta as laterais
+                        drawWidth = canvasHeight * imgAspectRatio;
+                        drawHeight = canvasHeight;
+                        xOffset = (canvasWidth - drawWidth) / 2;
+                        yOffset = 0;
+                    } else {
+                        // A imagem é mais alta, ajusta a altura e corta o topo e a base
+                        drawWidth = canvasWidth;
+                        drawHeight = canvasWidth / imgAspectRatio;
+                        xOffset = 0;
+                        yOffset = (canvasHeight - drawHeight) / 2;
+                    }
+
+                    // Desenhe a imagem redimensionada no Canvas para cobrir toda a área
+                    ctx.drawImage(img, xOffset, yOffset, drawWidth, drawHeight);
+
+                    // Adicione a moldura (substitua pela URL da sua moldura)
+                    const frame = new Image();
+                    frame.src = 'stamp.png';
+                    frame.onload = function() {
+                        // Desenhe a moldura para preencher toda a área de 500x500px
+                        ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+                    }
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+
+        // Função para baixar a imagem final
+        downloadButton.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'editado.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+    </script>
+</body>
+</html>
