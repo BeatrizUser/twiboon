@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ricardo Zito 2024</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo para área de drop */
+        #drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+        #drop-area.dragging {
+            background-color: #f0f0f0;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center" style="background-image: url('fundo.png'); background-size: cover; background-position: center;">
 
@@ -14,8 +27,24 @@
             <img src="capa.png" alt="Logo" class="m-0 pd-0">
         </div>
 
+        <!-- Opções de escolha -->
+        <div class="mb-4">
+            <label class="inline-flex items-center mr-4">
+                <input type="radio" name="option" value="com_prefeito" class="form-radio text-blue-600" checked>
+                <span class="ml-2">Com Prefeito</span>
+            </label>
+            <label class="inline-flex items-center">
+                <input type="radio" name="option" value="sem_prefeito" class="form-radio text-blue-600">
+                <span class="ml-2">Sem Prefeito</span>
+            </label>
+        </div>
+
+        <!-- Área de Drag and Drop -->
+        <div id="drop-area" class="mb-4">
+            Arraste e solte sua imagem aqui...
+        </div>
+
         <!-- Input para carregar a imagem -->
-        <h3 class="text-1xl font-bold mb-3">Escolha abaixo sua melhor foto:</h3>
         <input type="file" id="upload" accept="image/*" class="mb-4 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
         
         <!-- Canvas para desenhar a imagem com moldura, inicialmente oculto -->
@@ -30,66 +59,98 @@
     </div>
 
     <script>
-        // Referências aos elementos
         const upload = document.getElementById('upload');
+        const dropArea = document.getElementById('drop-area');
         const canvas = document.getElementById('canvas');
         const canvasContainer = document.getElementById('canvas-container');
         const ctx = canvas.getContext('2d');
         const downloadButton = document.getElementById('download');
+        const options = document.querySelectorAll('input[name="option"]');
+        const imageUrlInput = document.getElementById('image-url');
+        const loadUrlButton = document.getElementById('load-url');
 
-        // Função para carregar a imagem e desenhar no Canvas
+        // Função para obter a moldura selecionada
+        function getSelectedFrame() {
+            const selectedOption = document.querySelector('input[name="option"]:checked').value;
+            return selectedOption === 'com_prefeito' ? 'stamp2.png' : 'stamp.png';
+        }
+
+        // Função para desenhar a imagem no Canvas
+        function drawImageOnCanvas(imgSrc) {
+            const img = new Image();
+            img.onload = function() {
+                const canvasWidth = 500;
+                const canvasHeight = 500;
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
+
+                const imgAspectRatio = img.width / img.height;
+                const canvasAspectRatio = canvasWidth / canvasHeight;
+
+                let drawWidth, drawHeight, xOffset, yOffset;
+
+                if (imgAspectRatio > canvasAspectRatio) {
+                    drawWidth = canvasHeight * imgAspectRatio;
+                    drawHeight = canvasHeight;
+                    xOffset = (canvasWidth - drawWidth) / 2;
+                    yOffset = 0;
+                } else {
+                    drawWidth = canvasWidth;
+                    drawHeight = canvasWidth / imgAspectRatio;
+                    xOffset = 0;
+                    yOffset = (canvasHeight - drawHeight) / 2;
+                }
+
+                ctx.drawImage(img, xOffset, yOffset, drawWidth, drawHeight);
+
+                const frame = new Image();
+                frame.src = getSelectedFrame();
+                frame.onload = function() {
+                    ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+                }
+
+                canvasContainer.classList.remove('hidden');
+                downloadButton.classList.remove('hidden');
+            }
+            img.src = imgSrc;
+        }
+
+        // Função para lidar com o arraste e solte
+        dropArea.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropArea.classList.add('dragging');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('dragging');
+        });
+
+        dropArea.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropArea.classList.remove('dragging');
+            const file = event.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => drawImageOnCanvas(e.target.result);
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Função para carregar a imagem via input de arquivo
         upload.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        // Defina o tamanho do Canvas para 500x500
-                        const canvasWidth = 500;
-                        const canvasHeight = 500;
-                        canvas.width = canvasWidth;
-                        canvas.height = canvasHeight;
-
-                        // Calcule a proporção da imagem para que ela cubra toda a área do canvas
-                        const imgAspectRatio = img.width / img.height;
-                        const canvasAspectRatio = canvasWidth / canvasHeight;
-
-                        let drawWidth, drawHeight, xOffset, yOffset;
-
-                        if (imgAspectRatio > canvasAspectRatio) {
-                            // A imagem é mais larga, ajusta a largura e corta as laterais
-                            drawWidth = canvasHeight * imgAspectRatio;
-                            drawHeight = canvasHeight;
-                            xOffset = (canvasWidth - drawWidth) / 2;
-                            yOffset = 0;
-                        } else {
-                            // A imagem é mais alta, ajusta a altura e corta o topo e a base
-                            drawWidth = canvasWidth;
-                            drawHeight = canvasWidth / imgAspectRatio;
-                            xOffset = 0;
-                            yOffset = (canvasHeight - drawHeight) / 2;
-                        }
-
-                        // Desenhe a imagem redimensionada no Canvas para cobrir toda a área
-                        ctx.drawImage(img, xOffset, yOffset, drawWidth, drawHeight);
-
-                        // Adicione a moldura (substitua pela URL da sua moldura)
-                        const frame = new Image();
-                        frame.src = 'stamp.png';
-                        frame.onload = function() {
-                            // Desenhe a moldura para preencher toda a área de 500x500px
-                            ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-                        }
-
-                        // Exiba o canvas e o botão de download
-                        canvasContainer.classList.remove('hidden');
-                        downloadButton.classList.remove('hidden');
-                    }
-                    img.src = e.target.result;
-                }
+                reader.onload = (e) => drawImageOnCanvas(e.target.result);
                 reader.readAsDataURL(file);
+            }
+        });
+
+        // Função para carregar a imagem via URL
+        loadUrlButton.addEventListener('click', () => {
+            const url = imageUrlInput.value;
+            if (url) {
+                drawImageOnCanvas(url);
             }
         });
 
